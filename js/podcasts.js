@@ -1,6 +1,6 @@
 /* ===========================================
    CleanOS Academy — Podcasts System
-   Audio player with real audio files
+   Audio player with Yandex Disk integration
    =========================================== */
 
 const podcastsData = {
@@ -11,7 +11,7 @@ const podcastsData = {
       description: 'Полный обзор бизнес-плана для профессионального клинера: расчёт затрат на химию, инвентарь и использование мобильного приложения.',
       duration: '47:00',
       durationSec: 2820,
-      audioSrc: 'https://drive.google.com/uc?export=download&id=1argwIOFtjrEDblvil8fnS7zrT9u2uv1Z',
+      audioSrc: 'https://raw.githubusercontent.com/lowcostcleaning/cleanos-academy/main/compress.m4a',
       cover: '📊',
       category: 'Бизнес'
     }
@@ -27,8 +27,23 @@ let playerState = {
   isPlaying: false,
   currentTime: 0,
   volume: 1,
-  playbackRate: 1
+  playbackRate: 1,
+  isLoading: false
 };
+
+// Fetch direct download URL from Yandex Disk
+async function getYandexDirectUrl(publicUrl) {
+  try {
+    const apiUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${encodeURIComponent(publicUrl)}`;
+    const response = await fetch(apiUrl);
+    if (!response.ok) throw new Error('Failed to get download URL');
+    const data = await response.json();
+    return data.href;
+  } catch (error) {
+    console.error('Error getting Yandex URL:', error);
+    return null;
+  }
+}
 
 // Initialize podcasts page
 function renderPodcastsPage() {
@@ -37,9 +52,12 @@ function renderPodcastsPage() {
   // Create audio element if not exists
   if (!audioElement) {
     audioElement = new Audio();
+    audioElement.crossOrigin = 'anonymous';
     audioElement.addEventListener('timeupdate', onTimeUpdate);
     audioElement.addEventListener('ended', onAudioEnded);
     audioElement.addEventListener('loadedmetadata', onMetadataLoaded);
+    audioElement.addEventListener('error', onAudioError);
+    audioElement.addEventListener('canplay', onCanPlay);
   }
 
   // Restore player state from storage
@@ -68,7 +86,7 @@ function renderPodcastsUI() {
         <div class="now-playing-content">
           <div class="now-playing-cover">${playerState.currentEpisode.cover}</div>
           <div class="now-playing-info">
-            <span class="now-playing-label">Сейчас играет</span>
+            <span class="now-playing-label">${playerState.isLoading ? '⏳ Загрузка...' : 'Сейчас играет'}</span>
             <h3 class="now-playing-title">${playerState.currentEpisode.title}</h3>
             <p class="now-playing-description">${playerState.currentEpisode.description}</p>
           </div>
@@ -85,14 +103,14 @@ function renderPodcastsUI() {
           </div>
           
           <div class="player-buttons">
-            <button class="player-btn secondary" onclick="skipBackward()">
+            <button class="player-btn secondary" onclick="skipBackward()" ${playerState.isLoading ? 'disabled' : ''}>
               <span>⏪</span>
               <small>10с</small>
             </button>
-            <button class="player-btn primary" onclick="togglePlay()">
-              ${playerState.isPlaying ? '⏸️' : '▶️'}
+            <button class="player-btn primary" onclick="togglePlay()" ${playerState.isLoading ? 'disabled' : ''}>
+              ${playerState.isLoading ? '⏳' : playerState.isPlaying ? '⏸️' : '▶️'}
             </button>
-            <button class="player-btn secondary" onclick="skipForward()">
+            <button class="player-btn secondary" onclick="skipForward()" ${playerState.isLoading ? 'disabled' : ''}>
               <span>⏩</span>
               <small>10с</small>
             </button>
@@ -145,7 +163,7 @@ function renderPodcastsUI() {
               </div>
             </div>
             <div class="episode-play">
-              ${isCurrent && playerState.isPlaying ? '⏸️' : '▶️'}
+              ${isCurrent && playerState.isLoading ? '⏳' : isCurrent && playerState.isPlaying ? '⏸️' : '▶️'}
             </div>
           </div>
         `;
@@ -170,53 +188,65 @@ function renderPodcastsUI() {
   `;
 }
 
-// Play episode with real audio
-function playEpisode(episodeId) {
+// Play episode
+async function playEpisode(episodeId) {
   const episode = podcastsData.episodes.find(e => e.id === episodeId);
   if (!episode) return;
 
   // If same episode, toggle play/pause
-  if (playerState.currentEpisode?.id === episodeId) {
+  if (playerState.currentEpisode?.id === episodeId && !playerState.isLoading) {
     togglePlay();
     return;
   }
 
-  // New episode
+  // New episode - start loading
   playerState.currentEpisode = episode;
   playerState.currentTime = 0;
-  playerState.isPlaying = true;
+  playerState.isLoading = true;
+  playerState.isPlaying = false;
+  renderPodcastsUI();
+
+  showToast('⏳ Загрузка аудио...');
 
   // Load and play audio
   audioElement.src = episode.audioSrc;
   audioElement.playbackRate = playerState.playbackRate;
   audioElement.volume = playerState.volume;
-  audioElement.play().catch(err => {
-    console.error('Error playing audio:', err);
-    showToast('Ошибка воспроизведения аудио', 'error');
-  });
+  audioElement.load();
 
   // Save to storage
   Storage.updatePodcastProgress(episodeId, 0);
+}
 
-  // Update UI
+function onCanPlay() {
+  if (playerState.isLoading) {
+    playerState.isLoading = false;
+    playerState.isPlaying = true;
+    audioElement.play().catch(err => {
+      console.error('Error playing audio:', err);
+      showToast('❌ Ошибка воспроизведения', 'error');
+    });
+    renderPodcastsUI();
+    showToast(`▶️ ${playerState.currentEpisode.title}`);
+  }
+}
+
+function onAudioError(e) {
+  console.error('Audio error:', e);
+  playerState.isLoading = false;
+  playerState.isPlaying = false;
+  showToast('❌ Ошибка загрузки аудио', 'error');
   renderPodcastsUI();
-
-  showToast(`▶️ Воспроизведение: ${episode.title}`);
 }
 
 // Toggle play/pause
 function togglePlay() {
-  if (!playerState.currentEpisode) return;
+  if (!playerState.currentEpisode || playerState.isLoading) return;
 
   if (playerState.isPlaying) {
     audioElement.pause();
     playerState.isPlaying = false;
   } else {
-    // If audio not loaded yet, load it
-    if (!audioElement.src || audioElement.src !== playerState.currentEpisode.audioSrc) {
-      audioElement.src = playerState.currentEpisode.audioSrc;
-      audioElement.currentTime = playerState.currentTime;
-    }
     audioElement.play().catch(err => console.error('Error playing:', err));
     playerState.isPlaying = true;
   }
