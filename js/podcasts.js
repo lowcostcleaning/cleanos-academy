@@ -66,6 +66,9 @@ function renderPodcastsPage() {
     if (episode) {
       playerState.currentEpisode = episode;
       playerState.currentTime = state.podcasts.currentTime || 0;
+      // Set audio source so play button works
+      audioElement.src = episode.audioSrc;
+      audioElement.currentTime = playerState.currentTime;
     }
   }
 
