@@ -13,3 +13,5 @@ Thumbs.db
 
 # Logs
 *.log
+audio/*.m4a
+audio/*.mp3
