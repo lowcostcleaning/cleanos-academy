@@ -1,28 +1,28 @@
 /* ===========================================
    CleanOS Academy — Main Application
-   Версия 2.0 — работает с PHP API
    =========================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Initialize app
     initApp();
 });
 
-async function initApp() {
-    // Update last visit via API
-    API.updateVisit();
+function initApp() {
+    // Update last visit
+    Storage.updateLastVisit();
 
     // Render components based on current page
     const page = document.body.dataset.page || 'home';
 
     switch (page) {
         case 'home':
-            await renderHomePage();
+            renderHomePage();
             break;
         case 'module':
-            await renderModulePage();
+            renderModulePage();
             break;
         case 'test':
-            await renderTestPage();
+            renderTestPage();
             break;
         case 'podcasts':
             renderPodcastsPage();
@@ -35,42 +35,36 @@ async function initApp() {
 }
 
 // ===== Home Page =====
-async function renderHomePage() {
-    // Загружаем данные с сервера
-    const data = await API.getModules();
-
-    if (!data.success) {
-        console.error('Failed to load modules:', data.error);
-        return;
-    }
+function renderHomePage() {
+    const state = Storage.getState();
+    const overallProgress = Storage.getOverallProgress();
 
     // Update hero progress
     const progressCircle = document.querySelector('.hero-progress-circle .fill');
     const progressValue = document.querySelector('.hero-progress-value');
 
     if (progressCircle) {
-        progressCircle.style.setProperty('--progress', data.overallProgress);
+        progressCircle.style.setProperty('--progress', overallProgress);
     }
     if (progressValue) {
-        progressValue.textContent = data.overallProgress + '%';
+        progressValue.textContent = overallProgress + '%';
     }
 
     // Render module cards
-    renderModuleCards(data.modules);
+    renderModuleCards(state);
 
     // Update stats
-    const progressData = await API.getProgress();
-    if (progressData.success) {
-        updateStats(progressData.stats);
-    }
+    updateStats(state);
 }
 
-function renderModuleCards(modules) {
+function renderModuleCards(state) {
     const container = document.querySelector('.modules-grid');
     if (!container) return;
 
+    const modules = Object.values(ModulesData);
+
     container.innerHTML = modules.map((module, index) => {
-        const progress = module.progress || 0;
+        const progress = state.modules[module.id]?.progress || 0;
         const status = progress === 0 ? 'new' : progress >= 100 ? 'complete' : 'progress';
         const statusText = { new: 'Новый', progress: 'В процессе', complete: 'Завершён' };
         const btnText = progress === 0 ? 'Начать' : progress >= 100 ? 'Повторить' : 'Продолжить';
@@ -97,55 +91,55 @@ function renderModuleCards(modules) {
     }).join('');
 }
 
-function updateStats(stats) {
+function updateStats(state) {
+    const completedModules = Object.values(state.modules).filter(m => m.completed).length;
+    const passedTests = Object.values(state.tests).filter(t => t.passed).length;
+    const avgScore = Object.values(state.tests).reduce((sum, t) => sum + t.score, 0) / 3;
+
     const statsElements = document.querySelectorAll('.stat-card-value');
-    if (statsElements[0]) statsElements[0].textContent = `${stats.completedModules}/${stats.totalModules}`;
-    if (statsElements[1]) statsElements[1].textContent = `${stats.passedTests}/${stats.totalTests}`;
-    if (statsElements[2]) statsElements[2].textContent = stats.avgScore + '%';
+    if (statsElements[0]) statsElements[0].textContent = completedModules + '/3';
+    if (statsElements[1]) statsElements[1].textContent = passedTests + '/3';
+    if (statsElements[2]) statsElements[2].textContent = Math.round(avgScore) + '%';
 }
 
 // ===== Module Page =====
-let currentModuleData = null;
-
-async function renderModulePage() {
+function renderModulePage() {
     const urlParams = new URLSearchParams(window.location.search);
     const moduleId = urlParams.get('id') || 'module1';
+    const module = ModulesData[moduleId];
 
-    // Загружаем модуль с сервера
-    const data = await API.getModule(moduleId);
-
-    if (!data.success) {
-        console.error('Failed to load module:', data.error);
+    if (!module) {
         window.location.href = 'index.html';
         return;
     }
 
-    currentModuleData = data.module;
-
     // Set module title
-    document.querySelector('.module-title').textContent = currentModuleData.title;
-    document.querySelector('.module-icon').textContent = currentModuleData.icon;
+    document.querySelector('.module-title').textContent = module.title;
+    document.querySelector('.module-icon').textContent = module.icon;
 
     // Render sidebar navigation
-    renderModuleSidebar(currentModuleData);
+    renderModuleSidebar(module);
 
     // Render first section or from URL
-    const sectionId = urlParams.get('section') || currentModuleData.sections[0].id;
-    renderSection(currentModuleData, sectionId);
+    const sectionId = urlParams.get('section') || module.sections[0].id;
+    renderSection(module, sectionId);
 
     // Setup navigation
-    setupModuleNavigation(currentModuleData);
+    setupModuleNavigation(module);
 }
 
 function renderModuleSidebar(module) {
     const container = document.querySelector('.module-nav');
     if (!container) return;
 
+    const state = Storage.getState();
+    const completedSections = state.modules[module.id]?.sections || [];
+
     container.innerHTML = module.sections.map((section, index) => {
+        const isCompleted = completedSections.includes(section.id);
         const urlParams = new URLSearchParams(window.location.search);
         const currentSection = urlParams.get('section') || module.sections[0].id;
         const isActive = section.id === currentSection;
-        const isCompleted = section.completed;
 
         return `
       <a href="?id=${module.id}&section=${section.id}" 
@@ -188,6 +182,7 @@ function renderSection(module, sectionId) {
 }
 
 function setupModuleNavigation(module) {
+    // Add click handlers to nav items
     document.querySelectorAll('.module-nav-item').forEach(item => {
         item.addEventListener('click', function (e) {
             e.preventDefault();
@@ -208,15 +203,26 @@ function setupModuleNavigation(module) {
     });
 }
 
-// ===== Section Completion (через API) =====
-window.markSectionComplete = async function (moduleId, sectionId) {
-    // Отправляем на сервер
-    const result = await API.completeSection(moduleId, sectionId);
+// ===== Section Completion =====
+window.markSectionComplete = function (moduleId, sectionId) {
+    const state = Storage.getState();
+    const module = state.modules[moduleId];
 
-    if (!result.success) {
-        showToast('Ошибка сохранения: ' + result.error, 'error');
-        return;
+    if (!module.sections) {
+        module.sections = [];
     }
+
+    if (!module.sections.includes(sectionId)) {
+        module.sections.push(sectionId);
+    }
+
+    // Calculate progress
+    const totalSections = ModulesData[moduleId].sections.length;
+    const completedSections = module.sections.length;
+    module.progress = Math.round((completedSections / totalSections) * 100);
+    module.completed = module.progress >= 100;
+
+    Storage.saveState(state);
 
     // Update UI
     const navItem = document.querySelector(`.module-nav-item[data-section="${sectionId}"]`);
@@ -231,12 +237,16 @@ window.markSectionComplete = async function (moduleId, sectionId) {
     showToast('Раздел отмечен как прочитанный! ✓');
 
     // Auto-navigate to next section
-    if (result.nextSection) {
+    const moduleData = ModulesData[moduleId];
+    const currentIndex = moduleData.sections.findIndex(s => s.id === sectionId);
+    if (currentIndex < moduleData.sections.length - 1) {
+        const nextSection = moduleData.sections[currentIndex + 1];
         setTimeout(() => {
-            const nextNav = document.querySelector(`.module-nav-item[data-section="${result.nextSection}"]`);
+            const nextNav = document.querySelector(`.module-nav-item[data-section="${nextSection.id}"]`);
             if (nextNav) nextNav.click();
         }, 500);
-    } else if (result.moduleCompleted) {
+    } else if (module.progress >= 100) {
+        // Module complete!
         showToast('🎉 Поздравляем! Модуль завершён!', 'success');
     }
 };
@@ -280,6 +290,7 @@ function setupSidebar() {
 
 // ===== Animations =====
 function setupAnimations() {
+    // Intersection Observer for scroll animations
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -300,6 +311,7 @@ function showToast(message, type = 'info') {
     toast.className = `toast toast-${type}`;
     toast.innerHTML = message;
 
+    // Add styles if not exist
     if (!document.querySelector('#toast-styles')) {
         const styles = document.createElement('style');
         styles.id = 'toast-styles';
@@ -323,10 +335,6 @@ function showToast(message, type = 'info') {
         border-color: var(--color-success);
         box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
       }
-      .toast-error {
-        border-color: #EF4444;
-        box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
-      }
       @keyframes slideInRight {
         from { transform: translateX(100px); opacity: 0; }
         to { transform: translateX(0); opacity: 1; }
@@ -345,4 +353,5 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
+// Export for global use
 window.showToast = showToast;
