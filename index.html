@@ -1,29 +1,33 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CleanOS Academy — Обучение клинеров</title>
-  <meta name="description" content="Премиальный учебный портал для профессиональных клинеров. Теория, тесты, аудио-подкасты.">
-  
+  <meta name="description"
+    content="Премиальный учебный портал для профессиональных клинеров. Теория, тесты, аудио-подкасты.">
+
   <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/components.css">
-  
+
   <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧹</text></svg>">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧹</text></svg>">
 </head>
+
 <body data-page="home">
   <!-- Sidebar Overlay (Mobile) -->
   <div class="sidebar-overlay"></div>
-  
+
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-icon">🧹</div>
       <div class="sidebar-logo-text">Clean<span>OS</span></div>
     </div>
-    
+
     <nav class="sidebar-nav">
       <a href="index.html" class="sidebar-link active">
         <span class="sidebar-link-icon">🏠</span>
@@ -41,8 +45,12 @@
         <span class="sidebar-link-icon">🎧</span>
         <span class="sidebar-link-text">Подкасты</span>
       </a>
+      <a href="starter-kit.html" class="sidebar-link">
+        <span class="sidebar-link-icon">🎒</span>
+        <span class="sidebar-link-text">Стартовый набор</span>
+      </a>
     </nav>
-    
+
     <div class="sidebar-footer">
       <div class="sidebar-user">
         <div class="sidebar-avatar">К</div>
@@ -53,16 +61,16 @@
       </div>
     </div>
   </aside>
-  
+
   <!-- Header -->
   <header class="header">
     <button class="btn btn-icon btn-ghost mobile-menu-btn">☰</button>
-    
+
     <div class="header-search">
       <span class="header-search-icon">🔍</span>
       <input type="text" class="header-search-input" placeholder="Поиск по курсам...">
     </div>
-    
+
     <div class="header-actions">
       <button class="btn btn-icon btn-ghost header-notification">
         🔔
@@ -70,7 +78,7 @@
       </button>
     </div>
   </header>
-  
+
   <!-- Main Content -->
   <main class="main-content">
     <!-- Hero Section -->
@@ -83,7 +91,7 @@
             Начать обучение →
           </button>
         </div>
-        
+
         <div class="hero-stats">
           <div class="hero-progress">
             <div class="hero-progress-circle">
@@ -98,23 +106,23 @@
         </div>
       </div>
     </section>
-    
+
     <!-- Section Header -->
     <div class="section-header">
       <h2 class="section-title">Модули обучения</h2>
       <a href="module.html?id=module1" class="btn btn-ghost">Все модули →</a>
     </div>
-    
+
     <!-- Modules Grid -->
     <div class="modules-grid">
       <!-- Modules will be rendered by JS -->
     </div>
-    
+
     <!-- Quick Actions -->
     <div class="section-header">
       <h2 class="section-title">Быстрые действия</h2>
     </div>
-    
+
     <div class="quick-actions">
       <div class="glass-card quick-action-card" onclick="window.location.href='test.html'">
         <div class="quick-action-icon tests">📝</div>
@@ -123,7 +131,7 @@
           <p>Проверьте свои знания</p>
         </div>
       </div>
-      
+
       <div class="glass-card quick-action-card" onclick="window.location.href='podcasts.html'">
         <div class="quick-action-icon podcasts">🎧</div>
         <div class="quick-action-text">
@@ -131,7 +139,7 @@
           <p>Учитесь на ходу</p>
         </div>
       </div>
-      
+
       <div class="glass-card quick-action-card" onclick="goToModule('module1')">
         <div class="quick-action-icon resources">📖</div>
         <div class="quick-action-text">
@@ -140,31 +148,31 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Stats -->
     <div class="section-header mt-8">
       <h2 class="section-title">Ваша статистика</h2>
     </div>
-    
+
     <div class="stats-grid">
       <div class="glass-card-static stat-card">
         <div class="stat-card-icon">📚</div>
         <div class="stat-card-value">0/3</div>
         <div class="stat-card-label">Модулей пройдено</div>
       </div>
-      
+
       <div class="glass-card-static stat-card">
         <div class="stat-card-icon">✅</div>
         <div class="stat-card-value">0/3</div>
         <div class="stat-card-label">Тестов сдано</div>
       </div>
-      
+
       <div class="glass-card-static stat-card">
         <div class="stat-card-icon">📊</div>
         <div class="stat-card-value">0%</div>
         <div class="stat-card-label">Средний балл</div>
       </div>
-      
+
       <div class="glass-card-static stat-card">
         <div class="stat-card-icon">🎧</div>
         <div class="stat-card-value">0</div>
@@ -172,10 +180,11 @@
       </div>
     </div>
   </main>
-  
+
   <!-- Scripts -->
   <script src="js/storage.js"></script>
   <script src="js/modules.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>
